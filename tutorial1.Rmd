@@ -1,0 +1,1397 @@
+---
+title: "Causal Inference in Medicine and Public Health (140.664) - Tutorial 1: Intro to R and RStudio"
+author: "Grace Ringlein, Carly Lupton Brantner, Noah Greifer"
+output: 
+  html_document:
+    code_download: true
+---
+
+# Introduction
+
+## What is R?
+
+-   A programming language
+-   Free to use
+-   Good for statistical analysis and plotting
+
+## What is RStudio?
+
+RStudio is an Integrate Development Environment (IDE) which is essentially a convenient interface to work with R code
+
+## New to R?
+
+-   Download R and RStudio : <https://posit.co/download/rstudio-desktop/>
+-   Extra detailed instructions on downloading: <https://rafalab.github.io/dsbook/installing-r-rstudio.html>
+
+## Getting started in RStudio
+
+-   *Live walk through of RStudio*
+
+    -   Editor / scripting panel (Top left)
+
+    -   Workspace and history panel (Top right)
+
+    -   Console and Terminal (Bottom left)
+
+    -   Files, packages, plots, and help panel (Bottom right)
+
+### What is a `.Rmd` file?
+
+Within a `.Rmd` (RMarkdown) file, we have code chunks that start with "\`\`\`{r }". Within these chunks, we will write our code. Outside these chunks, we are writing in "Markdown" which is really more like a text editor. That's where I am typing this now.
+
+```{r}
+print("I am inside a code chunk")
+```
+
+### What is the difference between a .R and .Rmd file?
+
+-   `.Rmd` files are a nice way to combine both text, code, and code output into one pdf, or html, or word file. The process of generating this output is called 'knitting'
+
+-   A `.R` file is basically the equivalent of one big code chunk
+
+-   The actual `R` code you write is the same in either file type, it's really just about how you end up looking at the output
+
+-   For these tutorials and the assignment codes, we will post both `.Rmd` files and `.html`files (the 'knitted' output, from which you can download also downlaod the `.Rmd` directly)
+
+-   In this class you will not be asked to turn in any code, so for your own work you are welcome to use any file type you prefer
+
+### `R` Projects
+
+`R` Projects are one way to organize code
+
+-   RStudio -\> File -\> New Project -\> New Directory -\> New Project
+
+This will create a new directory in the location you specified, and within it, a ".Rproj" file that contains information about the project. You don't open or do anything with this file.
+
+You can save your code and data into this folder.
+
+For this class, I would recommend creating a project called something like `tutorials_and_assignments` in which you can keep all of the tutorials and assignment code files for this class!
+
+### New files
+
+You can create new files using:
+
+-   RStudio -\> File -\> New File -\> R Markdown (or R Script, etc)
+
+### Base R
+
+-   "base R" is what you initially download from CRAN
+
+-   A core set of R features that does most basic functions
+
+-   A fully functional statistical environment
+
+### Packages
+
+-   Contain extra functions for statistical analysis and graphing (examples: `ggplot`, `dplyr`)
+
+-   Accessible via "CRAN" (Comprehensive R Archive Network), can be downloaded and then loaded in R using "`install.packages`" and "`library`" commands
+
+-   There are other ways to download (directly from github, etc)
+
+The first time you use a package you install it (example: `here` package):
+
+```{r eval=FALSE}
+install.packages("here")
+```
+
+Whenever you want to use the package, you load it with "library", and then you can use the contents of the package! We will return to this later in the Lab.
+
+```{r message=FALSE}
+library("here")
+```
+
+## How to get help in an R Session
+
+In RStudio, documentation will appear in the bottom right panel in the "Help" tab
+
+```{r results = "hide", message = FALSE}
+?lm     			# function search
+help(lm)			# function search
+help.search("linear models")    # non-function keyword search
+help.start()    		# R manuals
+```
+
+# Coding in R
+
+## Syntax notes:
+
+-   R is case sensitive
+
+-   Lines don't end in any special character
+
+-   '\#' comments things out
+
+## R as a language
+
+-   R is "object oriented"
+
+    -   We create "objects" that have a name, contain data, and are member of a "class"
+
+    -   The class essentially tells us about the type of object we are working with
+
+        -   numeric (decimal values, such as 4.3)
+
+        -   integer (4)
+
+        -   character ("hello world")
+
+        -   complex (4 + 3i)
+
+        -   logical (TRUE or FALSE)
+
+-   R is "functional": we have functions that operate on our "objects"
+
+    -   `mean(x)`
+
+    -   `plot(x)`
+
+    -   The class of the object determines how the function operates
+
+## Math in R
+
+Use +, -, /, \*, ( ), \^
+
+```{r}
+1+1
+```
+
+```{r}
+1-3
+```
+
+```{r}
+1+1*7
+```
+
+```{r}
+1/5
+```
+
+```{r}
+(1+1) * 7
+```
+
+```{r}
+2^3
+```
+
+## Objects
+
+`<-` or `=` let you assign a value to a particular name. They function the exact same. Pick one and try to use it consistently.
+
+Here 'x' is the name of the object and it has a value of 1. Look in the upper right environment panel of RStudio and you will see this.
+
+```{r}
+x <- 1
+x
+```
+
+```{r}
+y <- 1
+y
+```
+
+You can also reassign a new value to the same variable:
+
+```{r}
+y <- 2
+y
+```
+
+The arrow also works in the other direction but I don't recommend using that.
+
+```{r}
+3 -> z
+z
+```
+
+You can evaluate math expressions using the variables. The following is equivalent to (1+2)\*3, which is 9
+
+```{r}
+(x+y)*z
+```
+
+## Classes
+
+You can check the class of an object using the function `class(x)`
+
+```{r}
+test_numeric <- 4.3
+class(test_numeric)
+```
+
+```{r}
+test_character <- "hello world"
+class(test_character)
+```
+
+Logical values are `TRUE` or `FALSE` which can also be abbreviated to `T` and `F`
+
+```{r}
+test_true <- TRUE
+class(test_true)
+```
+
+### Changing object class
+
+By default, numbers are type 'numeric' (even if you give a whole number like "1").
+
+```{r}
+x <- 1
+class(x)
+```
+
+If we want it to be an integer we can use the `L` suffix.
+
+```{r}
+x <- 1L
+class(x)
+```
+
+Alternatively, an existing numeric object can be converted to an integer using the function `as.integer(x)`
+
+```{r}
+x <- 1
+x <- as.integer(x)
+class(x)
+```
+
+Not all conversions will work so intuitively. If you try to change a character into an integer, you will get an "NA" (missing) value.
+
+```{r}
+w <- "hello world"
+class(w)
+```
+
+```{r}
+w <- as.integer(w)
+```
+
+```{r}
+w
+class(w)
+```
+
+Logical values can be converted to integers where 'TRUE' is 1 and 'FALSE' is 0.
+
+```{r}
+as.integer(TRUE)
+as.integer(FALSE)
+```
+
+There are equivalent functions to convert an object to a logical, a numeric, etc.
+
+```{r}
+x <- as.logical(1)
+x
+class(x)
+```
+
+## Logical expressions
+
+### Evaluating logical expressions
+
+Logical expressions are statements like "true or false: a equals b" or "is 10 greater than 20?"
+
+We can create such statements in R using the following syntax:
+
+-   `==` (equals)
+-   `!=` (not equals)
+-   `>` (greater than)
+-   `>=` (greater than or equal to)
+-   `<` (less than)
+-   `<=` (less than or equal to )
+
+**Example:** x is 1
+
+```{r}
+x <- 1
+```
+
+x equals 1?
+
+```{r}
+x == 1
+```
+
+x equals 2?
+
+```{r}
+x == 2
+```
+
+x is not equal to 2?
+
+```{r}
+x != 2
+```
+
+x greater than 1?
+
+```{r}
+x > 1
+```
+
+x greater than or equal to 1?
+
+```{r}
+x >= 1
+```
+
+### Multiple logicals
+
+For two logicals, a and b, we can also look at if a AND b are true using `a & b` or if a OR b is true using `a | b`
+
+**Examples:** `&`
+
+```{r}
+a <- x == 1
+b <- z == 1
+c <- y == 2
+d <- "hello world" != "hello world"
+```
+
+```{r}
+a
+b
+c
+d
+```
+
+a and b are not both true, so a and b is 'FALSE'
+
+```{r}
+a & b
+```
+
+a and c are both true, so a and a is 'TRUE'
+
+```{r}
+a & c
+```
+
+**Examples:** `|`
+
+a is true so even though b is not true, so a \| b (a or b) is 'TRUE'
+
+```{r}
+a | b
+```
+
+b and d are both not true, so b \| d is 'FALSE'
+
+```{r}
+b | d
+```
+
+a and c are both true, so a \| c is 'TRUE'
+
+```{r}
+a | c
+```
+
+Parentheses work with logicals:
+
+```{r}
+(a | b) & c
+```
+
+## Vectors and matrices
+
+### Defining Vectors
+
+-- A vector is an ordered collection of data of the same type -- A vector can only contain objects of the same class
+
+Vectors can be defined using `c()` and can contain values of any data type:
+
+```{r}
+a <- c(0.5, 0.6)
+a
+```
+
+```{r}
+b <- c("a", "b", "c") 
+b
+```
+
+```{r}
+c <- c(TRUE, FALSE)
+c
+```
+
+```{r}
+d <- c(T, F) 
+d
+```
+
+Here `e` is a vector that is TRUE where elements of 'e' satisfy the given condition (here, that they are "a")
+
+```{r}
+e <- b == "a"
+b
+e
+```
+
+Note that with logicals, we can convert to 0 and 1 using `as.numeric`
+
+```{r}
+as.numeric(e)
+```
+
+A vectors of zeros can also be created using `vector` and specifying the length and data type.
+
+```{r}
+f <- vector("numeric", length = 10)
+f
+```
+
+### Vectors of sequential values
+
+You can create a vector going from a to b (inclusive) in units of '1' with `:`
+
+```{r}
+g <- 5:10
+g
+```
+
+This also works with decimals:
+
+```{r}
+h <- 5.2:10.7
+h
+```
+
+A more flexible way is to use `seq(a,b,c)` which goes from a to b in units of c:
+
+```{r}
+i <- seq(1,5,1)
+i
+```
+
+```{r}
+j <- seq(1,5,.1)
+j
+```
+
+You can make a vector of repeated values with `rep(x,times)`
+
+```{r}
+rep(9,3)
+```
+
+You can get the length of a vector using `length`
+
+```{r}
+i
+```
+
+```{r}
+length(i)
+```
+
+```{r}
+j
+```
+
+```{r}
+length(j)
+```
+
+### Selecting elements in a vector
+
+You can get the ith element of a vector `x` using brackets: `x[i]`
+
+**Examples:**
+
+The first element of `j`
+
+```{r}
+j[1]
+```
+
+The first three elements of `j`
+
+```{r}
+j[1:3]
+```
+
+The first and the tength elements of `j`
+
+```{r}
+j[c(1,10)]
+```
+
+You can also select elements where an expression is true
+
+```{r}
+j[j>4]
+```
+
+### Factors
+
+-   Factors are used to represent categorical data.
+-   Factors can be unordered or ordered
+    -   "apples","bananas","pears"
+    -   "low", "medium","high"
+-   Most statistical model functions in R know how to work with factors
+    -   Having a variable that has values "Male" and "Female" is better than a variable that has values 1 and 2.
+
+\*\* Not a factor, just a vector of characters:\*\*
+
+```{r}
+gender <- c("male", "male", "male", "male", "male", "male", "male", "male", "male", 
+            "male", "male", "male", "male", "female", "female",
+            "male", "male",  "male", "male", "female")
+gender
+is.factor(gender)
+```
+
+`table` counts the number of times each value appears in the vector.
+
+```{r}
+table(gender)
+```
+
+**Ordinary factors**
+
+```{r}
+gender.f <- factor(gender)
+gender.f
+```
+
+```{r}
+is.factor(gender.f)
+```
+
+```{r}
+levels(gender.f)
+```
+
+```{r}
+table(gender.f)
+```
+
+```{r}
+gender2.f <- factor(gender, levels = c("male", "female"))
+gender2.f
+```
+
+```{r}
+is.factor(gender2.f)
+```
+
+```{r}
+levels(gender2.f)
+```
+
+Even though the counts are the same now "male" appears first
+
+```{r}
+table(gender2.f)
+```
+
+### Ordered Factors
+
+You can tell an ordered factor from an ordinary factor by the presence of directional signs (\< or \>) in the levels
+
+```{r}
+g.order <- ordered(gender, levels = c("male", "female"))
+g.order
+```
+
+```{r}
+is.factor(g.order)
+```
+
+```{r}
+levels(g.order)
+```
+
+```{r}
+table(g.order)
+```
+
+### `sum()` and `mean()`
+
+You can take the sum of all values in a vector using `sum()`
+
+Example: sum of 1,2,3,4,5
+
+```{r}
+i
+sum(i)
+```
+
+You can also take the sum of a vector of logical values, where it will treat "TRUE" as a 1 and "FALSE" as a zero.
+
+```{r}
+e
+sum(e)
+```
+
+You can take the average using `mean()`
+
+Example: average of 1,2,3,4,5 is 3
+
+```{r}
+mean(i)
+```
+
+Example: average of TRUE, FALSE, FALSE (equivalent to 1,0,0)
+
+```{r}
+mean(e)
+```
+
+Other similar functions are `median`, `sd`, `var`
+
+### Defining matrices
+
+`cbind()` and `rbind()` make matrices out of vectors (column-wise or row-wise, respectively)
+
+```{r}
+x <- c(10,20,30,40)
+y <- c(50,60,70,80)
+matrix1 <- cbind(x,y)
+matrix1
+```
+
+```{r}
+cbind(y,x)
+```
+
+```{r}
+rbind(x,y)
+```
+
+`t()` transposes a matrix
+
+```{r}
+matrix1
+```
+
+```{r}
+t(matrix1) 
+```
+
+`matrix(x,ncol,nrow)` makes a matrix with 'x' for each value in a matrix with specified dimensions:
+
+```{r}
+matrix2<- matrix(0,ncol=4,nrow=4)
+matrix2
+```
+
+## Random numbers
+
+We can generate random numbers in R for a number of distributions:
+
+`rnorm(n,mean,sd)` generates 'n' random numbers from a normal distribution (if you don't include mean and sd it assumes a standard normal)
+
+**Example:** three random numbers from a normal distribution with mean 1 and standard deviation 0.5
+
+```{r}
+rnorm(3,1,.5)
+```
+
+`rbinom(n,size,prob)` is also commonly used, it generates random numbers from a binomial. N is the number of samples, `size` is the "number of trials" which should be 1 if you only want zero or one data (bernoulli data), and `prob` is the probability of a 1
+
+**Example:** draw ten random bernoulli numbers with equal probability of 0 or 1
+
+```{r}
+rbinom(10,1,.5)
+```
+
+### `set.seed()`
+
+`set.seed()` allows us to regenerate the same random numbers multiple times. This is helpful for reproducability. The number in the parentheses is like an ID number, so that anyone who uses this `seed` gets the same numbers:
+
+```{r}
+set.seed(12345)
+rnorm(3,1,.5)
+```
+
+```{r}
+set.seed(12345)
+rnorm(3,1,.5)
+```
+
+```{r}
+set.seed(12345)
+rnorm(3,1,.5)
+```
+
+Without using `set.seed()`, I will get different results:
+
+```{r}
+rnorm(3,1,.5)
+```
+
+```{r}
+rnorm(3,1,.5)
+```
+
+```{r}
+rnorm(3,1,.5)
+```
+
+# Working with data
+
+## Working directory
+
+Tells `R` code where to look for data or any other files you may be loading
+
+### Option 1: `here` package
+
+If you are using an `R` project, this is the easiest. `here` gets the path of your `R` Project directory and allows you to more easily access subdirectories.
+
+```{r}
+here("data")
+```
+
+```{r eval=FALSE}
+test <- read.csv(here("data","test.csv"))
+```
+
+### Option 2: set working directory
+
+Using `setwd` does not rely on having an R project, but it does mean you need to "hardcode" the path to the directory you are working in.
+
+Replace the path below with an existing location on the computer you are using:
+
+```{r}
+## In PC:
+#setwd("C://myfolder")  
+## In mac:
+# setwd("~/Library/CloudStorage/OneDrive-JohnsHopkins/courses/causal_TA/Lab1")
+```
+
+You can also do this manually:
+
+RStudio on Mac: Session -\> Set Working Directory
+
+RStudo on Windows: Tools -\> Set Working Directory
+
+**This is fine if only you are using your code, but can be tough if you are collaborating with others who may have a different file structure.**
+
+## Loading data
+
+Install and load in the "MatchIt" package (so that we can access the "lalonde" data set).
+
+```{r}
+#install.packages("MatchIt")
+library(MatchIt)
+```
+
+Load in the Lalonde dataset into memory: now have "lalonde" object in workspace.
+
+```{r}
+data(lalonde)
+```
+
+### Reading and writing data to .csv files
+
+You can use following code to save data to your project directory, in base R:
+
+```{r}
+write.csv(lalonde,here("lalonde_save.csv"))
+```
+
+You can read the file in using base R:
+
+```{r}
+lalonde <- read.csv(here("lalonde_save.csv"))
+```
+
+If you go to the "Environment" tab and click "Import Dataset" you can find a file in your computer and import that data. If you use the "From Text (readr)" option you will also be able to see the R code that can be used to read in that data ("Code Preview"). `readr` is a package with functions for reading in various types of data.
+
+**Example** with `readr` (the only difference is `read_csv` versus `read.csv`)
+
+```{r}
+#install.packages("readr")
+library("readr")
+lalonde <- read_csv(here("lalonde_save.csv"))
+```
+
+### Other file types
+The `haven` package also has functions for reading in other data types, like SPSS, Stata, or SAS files. 
+
+```{r}
+#install.packages("haven")
+library(haven)
+```
+
+### Quick look at the data
+
+Let's take a quick look at the structure and summary of "lalonde"
+
+```{r}
+?lalonde
+```
+
+Check object type of lalonde. lalonde is a 'data.frame' but also works with funtions for 'tbl', etc. Don't worry too much about that.
+
+Data.frames are typical data tables that researchers come up with -- like a spreadsheet.
+
+-   rectangular table with rows and columns; data within each column has the same type (e.g. number, text, logical), but different columns may have different types.
+
+```{r}
+class(lalonde)
+```
+
+`head` displays first several rows of the data
+
+```{r}
+head(lalonde)
+```
+
+`nrow` tells us how many rows are in the data.frame
+
+```{r}
+nrow(lalonde)
+```
+
+`ncol` tells us how many columns are in the data.frame
+
+```{r}
+ncol(lalonde)
+```
+
+We can see what data type each column is below the variable name, but can check also object type of variables explictly:
+
+```{r}
+class(lalonde$married)
+class(lalonde$re78)
+```
+
+`names` display names of all variables in data frame
+
+```{r}
+names(lalonde)
+```
+
+`summary` gives numeric summaries of the variables in the data
+
+```{r}
+summary(lalonde)
+```
+
+We can convert from one object type to another
+
+```{r}
+lalonde.matrix <- as.matrix(lalonde[,2:5])
+class(lalonde.matrix)
+```
+
+## Selecting data
+
+### in base R
+
+We can select specific rows and columns using [i,j] where i and j are either single numbers or vectors of numbers.
+
+**Examples:**
+
+First row first element
+
+```{r}
+lalonde[1,1]
+```
+
+First row (need the comma to indicate we want the first row and every column)
+
+```{r}
+lalonde[1,]
+```
+
+If we did not have the comma, we get the first column
+
+```{r}
+lalonde[1]
+
+```
+
+Which is equivalent to
+
+```{r}
+lalonde[,1]
+```
+
+We can also select specific rows using a vector.
+
+**Examples:**
+
+Select rows 1 and 10:
+
+```{r}
+lalonde[c(1,10),]
+```
+
+Select rows 1 *through* 10:
+
+```{r}
+lalonde[1:10,]
+```
+
+Select row 1 to 6, columns 1 to 3
+
+```{r}
+lalonde[1:6,1:3]
+```
+
+You can refer to a variable within a data frame with `$`:
+
+**Example:**
+
+Select the 'married' column
+
+```{r}
+married_lalonde <- lalonde$married
+married_lalonde
+```
+
+### with `dplyr`
+
+```{r}
+#install.packages("dplyr")
+library(dplyr)
+```
+
+We're also going to go over some basics in data manipulation using the `dplyr` package!
+
+For more information on the `dplyr` package, there is a great course called Statistical Computing offered in the SPH, or there are plenty of online resources (<https://dplyr.tidyverse.org/> and <https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html>).
+
+`dplyr` uses what's called the "pipe" tool, `%>%`, which takes whatever comes before the pipe and applies the function to it that comes after the pipe.
+
+For the first example below, `lalonde$married %>% sum()` takes the column `married` and then applies the function `sum()`
+
+```{r}
+lalonde$married %>% sum()
+```
+
+We can chain multiple functions together:
+
+```{r}
+lalonde$married %>% sum() %>% length()
+```
+
+There are many useful functions in `dplyr` for data manipulation in addition to the pipe.
+
+We will look at:
+
+-   `pull`
+-   `select`
+-   `filter`
+-   `summarize`
+-   `mutate`
+
+`pull` is like using the `$` to select a specific column. So `lalonde %>% pull(married)` takes the data set `lalonde`, and "pulls" the `married` variable out.
+
+```{r}
+lalonde %>% pull(married)
+```
+
+Let's create a new dataset that is only the 2nd-5th columns of `lalonde`. In `dplyr`, we'd use the `select()` function to select certain columns:
+
+```{r}
+lalonde %>% select(2:5) 
+```
+
+Note that we could also use `select()` with specific column names:
+
+```{r}
+lalonde %>% select(treat,age,educ,race) %>% head()
+```
+
+We can also use `contains()` in `select` to select columns that contain a certain phrase in their names that we could also use `select()` with specific column names:
+
+```{r}
+lalonde %>% select(contains("re7")) %>% head()
+```
+
+To subset the lalonde dataset for only those with `nodegree == 1` in base R:
+
+```{r}
+lalonde.nodegree <- lalonde[lalonde$nodegree==1,]
+```
+
+in `dplyr`, we would use the `filter()` function:
+
+```{r}
+lalonde.nodegree <- lalonde %>% filter(nodegree == 1)
+```
+
+We can use multiple logical statement to evaluate conditions, and see how many people in our data meet those conditions:
+
+```{r}
+lalonde %>% filter(educ>5 & re74<5000) %>% head()
+```
+
+```{r}
+table(lalonde$educ>5 & lalonde$re74<5000)
+sum(lalonde$educ>5 & lalonde$re74<5000)
+```
+
+Both of the functions above return the number of people who have `educ > 5` and `re74 < 5000`. We can find this in `dplyr` as well using `summarise` with `n()` to count the number of rows after filtering with the `filter()` function:
+
+```{r}
+lalonde %>% 
+  filter(educ > 5 & re74 < 5000) %>% 
+  summarise(n = n(),
+            mean(age))
+```
+Say we want to make indicator variables in our data that indicate whether a person meets these conditions.
+
+```{r}
+lalonde$v1 <- lalonde$educ>5 & lalonde$re74<5000
+names(lalonde)
+lalonde %>% select(educ,re74,v1) %>% head()
+```
+
+Or we can do this in `dplyr` using `mutate()`:
+
+```{r}
+lalonde <- lalonde %>% 
+  mutate(v2 = educ > 5 & re74 < 5000)
+
+lalonde %>% select(educ,re74,v1,v2) %>% head()
+```
+
+Check to see if there are any places where v1 != v2:
+
+```{r}
+lalonde %>% 
+  summarise(sum(v1!=v2))
+```
+
+We may want to create a variable that takes certain values if a particular statement is true.
+
+This can be done using `ifelse` where the first argument is the statement to evaluate, the second is the value to return if the statement is true, and the last is the value to return if the statement is false
+
+```{r}
+lalonde <- lalonde %>% mutate("child" = ifelse(age < 18,"child","adult"))
+```
+
+Let's look at participants of age 17 or 18 and see our new variable. Let's select only the two columns `age` and `child` and then only look at the first six values using `head()`
+
+```{r}
+lalonde %>% filter(age == 18 | age == 17) %>% select(age,child) %>% head()
+```
+
+Great, it worked!
+
+We can also use `case_when` to do something similar. `case_when` is nice because you don't just need to have two possible options, you can have as many as you want. Statements are evaluated in order:
+
+```{r}
+lalonde <- lalonde %>% mutate("age_group" = 
+                                case_when(age < 18 ~ "child",
+                                          age < 30 ~ "young adult",
+                                          TRUE ~ "adult"))
+```
+
+Let's look at participants of age 17, 18, 29 or 30 and see our new variable. Let's select only the two columns `age` and `age_group` and then only look at the first six values using `head()`
+
+```{r}
+lalonde %>% filter(age == 18 | age == 17 | age == 30 | age == 29) %>% select(age,age_group) %>% head()
+```
+
+We can count the number in each group as:
+
+```{r}
+lalonde %>% pull(age_group) %>% table()
+```
+
+Alternatively, we can use `count`:
+
+```{r}
+lalonde %>% count(age_group)
+```
+
+## Random sampling
+
+We can select a random sample from a vector using `sample(x,size,replace)` Note that by default `sample` samples without replacement.
+
+**Example:** randomly choose two of the elements of x
+
+```{r}
+set.seed(99999)
+x <- c("apples","bananas","oranges","peaches")
+sample(x,2,replace=FALSE)
+```
+
+We can select a random sample from a data set by randomly selecting the row indices, then selecting those rows.
+
+```{r}
+random_indices <- sample(1:nrow(lalonde),10,replace=FALSE)
+lalonde[random_indices,]
+```
+
+## Missing values
+
+Now let's move on to working with data that has missing values. First, create a vector called `nomissing` that does not have any missing values:
+
+```{r}
+nomissing <- c(1,2,2,2,4,5,7,8,9,20, 99, 99, 22, 45, 45, 1,1,2,3,11,12,13,99, 100, 1,2,4)
+```
+
+`is.na()` returns a logical vector of the same length as `nomissing`, where the vector contains values of `TRUE` whenever the value is missing.
+
+```{r}
+is.na(nomissing)
+```
+
+Now let's make a vector called `missing`, where some of the values are actually missing (coded as 'NA'):
+
+```{r}
+missing <- c(1,2,2,2,4,5,7,NA,9,20, 99, 99, 22, NA, 45, 1,NA,2,3,11,12,13,99, NA, 1,2,4)
+```
+
+Now, `is.na(missing)` will contain some values that equal `TRUE`:
+
+```{r}
+is.na(missing) 
+```
+
+We can also subset `missing` to print out only the non-NA values:
+
+```{r}
+missing[!is.na(missing)]
+```
+
+Let's make a data frame of the two vectors and practice recoding values to equal NA:
+
+```{r}
+mydata <- data.frame(nomissing, missing)
+mydata
+```
+
+Often times, values that are really missing are coded as numeric values like "99" or "999". Here's how we can set those values to be properly coded as missing, in base R:
+
+```{r eval=FALSE}
+mydata$nomissing_na <- mydata$nomissing
+mydata$nomissing_na[mydata$nomissing_na==99] <- NA
+```
+
+And here is how we can set the values as NA with `dplyr`. We can use the `mutate()` function to alter the existing variables or create new ones
+
+```{r}
+
+mydata <- mydata %>% 
+  mutate(nomissing_na = case_when(nomissing == 99 ~ NA,TRUE ~ nomissing))
+
+mydata %>% select(nomissing,nomissing_na) %>% tail()
+```
+
+See how this creates a new variable, `nomissing_na`, where all values in `nomissing` that were equal to "99" are now equal to "NA".
+
+If you ever have missing values in a variable and try taking the mean, you'll get that the mean is "NA". We can get rid of the missing values while taking the mean by setting `na.rm=TRUE` in the `mean()` function:
+
+```{r}
+mean(mydata$nomissing_na)
+mean(mydata$nomissing_na, na.rm=TRUE)
+```
+
+You can also use `na.omit()` to get rid of all rows that contain missing values:
+
+```{r}
+newdata <- na.omit(mydata)
+newdata
+
+nrow(mydata)
+nrow(newdata)
+```
+
+## Descriptive plotting
+
+Here's some code for creating basic descriptive plot using the `plot()` function and some others in base R.
+
+```{r}
+plot(lalonde$re74,lalonde$re75)
+```
+
+I would also recommend exploring the package ggplot2 in R. This package is in what's called the "tidyverse" in R, which includes the dplyr package that we explored for data manipulation. Ggplot2 has a lot of unique possibilities in terms of visuals, and it provides publication-ready output that you can customize easily with the addition of extra features.
+
+Here is the equilavent with `ggplot`:
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+
+ggplot(lalonde) + geom_point(aes(x=re74,y=re75))
+```
+
+### Histograms
+
+```{r}
+hist(lalonde$educ)
+```
+
+Add a title to the graph with the "main" parameter:
+
+```{r}
+hist(lalonde$educ, main=paste("Level of Education"))
+```
+
+Add axis labels (use "xlab" and "ylab" to label the X and Y axes, respectively
+
+```{r}
+hist(lalonde$educ, xlab = "Education", ylab = "Frequency", main=paste("Level of Education"))
+```
+
+Add color with the "col" option
+
+```{r}
+hist(lalonde$educ, col = "darkolivegreen2", xlab = "Years of Education", ylab = "Frequency", main=paste("Level of Education"))
+```
+
+Here is the equivalent histogram with `ggplot`
+
+```{r}
+ggplot(lalonde) + geom_histogram(aes(x=educ))
+```
+
+And with customization to look like the plot above (changing number of bins, fill color and outline color, labels, theme_classic to remove plot lines, etc)
+
+```{r}
+ggplot(lalonde) + 
+  geom_histogram(aes(x=educ),fill = "darkolivegreen2",colour="black",bins=9) +
+  xlab("Years of Education") +
+  ylab("Frequency") + 
+  labs(title="Level of Education") + theme_classic()
+```
+
+**Box Plots, Groups** Let's create boxplots of `re74` by `married`:
+
+```{r}
+boxplot(re74~married,data=lalonde, main="Income Data", xlab="Married", ylab="Income - 1974")
+```
+
+```{r}
+ggplot(lalonde) + geom_boxplot(aes(x=married,y=re74,group=married))
+```
+
+Check out <http://research.stowers-institute.org/efg/R/Color/Chart/ColorChart.pdf> for a list of all the possible colors you can use in R.
+
+## Basic test statistics and modeling
+
+Below, we'll go through some basic commands to run different types of statistical tests and models:
+
+### t-test
+
+First, let's address the question, is there a difference in the average number of years of schooling between the group who received treatment and the group who received control?
+
+```{r}
+t.test(lalonde$educ[lalonde$treat==1], lalonde$educ[lalonde$treat==0])
+```
+
+### Wilcoxon test
+
+Next, we could do a Wilcoxon test. This test is nonparametric and does not use the assumption that the data is normally distributed. This test is also known as the Mann Whitney U Test and tests whether two samples are likely to be from the sample population.
+
+```{r}
+wilcox.test(lalonde$educ[lalonde$treat==1], lalonde$educ[lalonde$treat==0])
+```
+
+### Chi-Sq test
+
+Now, let's see about a relationship between treatment group and marriage status. Our null hypothesis would be that the proportion of people who are married is independent of treatment status, and our alternative would be that the marriage rates are different for the treatment group and control group.
+
+```{r}
+treat_mar <- table(lalonde$treat, lalonde$married)
+treat_mar
+chisq.test(treat_mar)
+```
+
+### Ordinary least squares regression
+
+```{r}
+lalonde.model <- lm(re75 ~ re74, data=lalonde)
+summary(lalonde.model)
+```
+
+```{r}
+# Display confidence intervals
+confint(lalonde.model)
+```
+
+```{r}
+# LM creates an object with results
+names(lalonde.model)
+lalonde.model$coefficients
+```
+
+### Logistic regression
+
+Finally, let's briefly show an example of a regression using the glm() function. Here, we want to model marriage status as a function of education and age. Since marriage status is a binary (0 or 1) variable, we need to use a logit link function and will exponentiate coefficients to calculate odds ratios.
+
+```{r}
+married.model <- glm(married~educ+age, family=binomial(link=logit), data=lalonde)
+summary(married.model)
+
+# Get odds ratios
+exp(married.model$coefficients) 
+# To get 95% confidence intervals for the ORs
+exp(confint.default(married.model))
+```
+
+### Create plots based on regression models:
+
+```{r}
+# first plot the data:
+plot(lalonde$re74,lalonde$re75)
+
+## then add line through the current plot:
+abline(lalonde.model, col = "red")
+
+# Check model fit
+plot(lalonde.model$fitted.values, lalonde.model$residuals)
+
+# Plot of residuals
+plot(lalonde$age,lalonde.model$residuals,ylab="Residuals",xlab="Age", main = "Residual Plot 1")
+plot(lalonde$re74,lalonde.model$residuals,ylab="Residuals",xlab="1974 Earnings", main = "Residual Plot 2")
+
+plot(lalonde.model)
+```
+
+## Bonus: Nice summary tables with `gtsummary`
+
+### `tbl_summary`
+
+<https://www.danieldsjoberg.com/gtsummary/articles/tbl_summary.html>
+
+By default, `tbl_summary` gives you the median and IQR for numeric data, and the count and percent for categorical or binary data.
+
+```{r}
+#install.packages(gtsummary)
+library(gtsummary)
+lalonde %>% select(age,age_group,treat,re78) %>% tbl_summary()
+```
+
+Here is an example with missing data, where for example for the column "missing" we have the median (5) and IQR (2,17) of the non missing data, and a count of the missing data (4).
+
+```{r}
+mydata %>% tbl_summary()
+```
+
+### `tbl_regression`
+
+<https://www.danieldsjoberg.com/gtsummary/articles/tbl_regression.html>
+
+For our linear regression:
+
+```{r}
+tbl_regression(lalonde.model)
+```
+
+For our logistic regression:
+
+```{r}
+tbl_regression(married.model)
+```
+
+We can get odds ratios instead of log(OR) for our coefficients as follows:
+
+```{r}
+tbl_regression(married.model,exponentiate = TRUE)
+```
+
+There is lots of good functionality for customizing these tables and combining multiple tables. Highly recommend.
