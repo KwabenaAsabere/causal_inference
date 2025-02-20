@@ -1,0 +1,45 @@
+---
+title: "CAUSAL INFERENCE IN R"
+author: "K.Asabere"
+df-print: kable
+execute: 
+  warning: false
+  echo: true
+  message: false
+format: html
+editor: visual
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(finalfit)
+library(broom)
+```
+
+```{r}
+load("net_data.rda")
+glimpse(net_data)
+head(net_data)
+```
+
+```{r}
+net_data %>% 
+  ggplot(aes(x= malaria_risk,fill = net))+
+  geom_density(alpha = 0.5,color = NA)
+```
+
+```{r}
+propensity_model <- glm(net ~ income + health + temperature ,
+                        data = net_data,
+                        family = binomial)
+
+propnsity_scores <- predict(propensity_model, type = "response")
+```
+
+```{r}
+propensity_scores
+```

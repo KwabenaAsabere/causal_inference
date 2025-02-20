@@ -1,0 +1,17 @@
+---
+title: "PROPENSITY SCORE MATCHING"
+author: "K.ASABERE"
+df-print: kable
+execute: 
+  warning: false
+  echo: true
+  message: false
+format: html
+editor: visual
+---
+
+## 
+
+```{r}
+
+```

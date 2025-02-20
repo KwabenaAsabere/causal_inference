@@ -1,0 +1,237 @@
+---
+title: "(140.644) Tutorial 3 Part 2: Assignment 2 Code"
+execute: 
+  warning: false
+  echo: true
+  message: false
+output: 
+  html_document:
+    code_download: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+```
+
+# Assignment 2 Code
+
+The following questions are based on the non-experimental data to examine whether non-cigarette smoking adolescents who smoke marijuana have higher odds of smoking as adults than those who do not smoke marijuana during adolescence. The data comes from the **Add Health** study (<http://www.cpc.unc.edu/projects/addhealth>)
+
+The original data contains information on 1541 individuals, 119 who smoke marijuana during adolescence and 1422 who did not. All covariates are measured at baseline.
+
+The variables (1 treatment, 1 outcome, 8 covariates) in our data set are:
+
+-   **exposure1**: Indicator for whether or not marijuana was smoked in adolescence. 1=yes, 0=no
+
+-   **smoke1:** Indicator for whether individual smoked in adulthood. 1=yes, 0=no
+
+-   **age:** Age at study entry (continuous)
+
+-   **male:** Indicator for whether the individual was male. 1=yes, 0=no
+
+-   **white:** Indicator for whether the individual was White or not. 1=yes, 0=no
+
+-   **susp:** Indicator for whether the individual was ever suspended from school. 1=yes, 0=no
+
+-   **mathG:** Math grade (ordinal, 1-4 corresponding to A-D)
+
+-   **readG:** Reading grade (ordinal, 1-4 corresponding to A-D)
+
+-   **parentED:** Parent education (ordinal, 1-5 corresponding to less than high school, high school, vocational school, some college, and college graduate (and beyond)).
+
+-   **housesmoke:** Indicator for the presence of a cigarette smoker in the household. 1=yes, 0=no
+
+## Read in the data
+
+First download the data from the Online Library on Courseplus (*Datasets for Problem Sets\>Problem Set 2* or also *Tutorial 3* folder).
+
+Once downloaded, I have placed the data in a folder called "data" in my current project directory)
+
+```{r load data}
+load(here("ADDHEALTH.Rdata"))
+```
+
+Alternative ways to load data:
+
+```{r eval=FALSE}
+#Set working directory to your own folder where the data is
+#Can also use Session > Set Working Directory > Choose Directory...
+#setwd("/Users/graceringlein/Library/CloudStorage/OneDrive-JohnsHopkins/courses/causal_TA/causal_140.664_tutorials")
+#getwd()
+```
+
+`ADDHEALTH.Rdata` contains an object called 'df' that is now loaded into the environment.
+
+Here are some commands to take a look at the data structure:
+
+```{r}
+names(df)
+head(df)
+summary(df)
+dim(df)
+table(df$exposure1)
+```
+
+## PS Weighting using WeightIt
+
+`WeightIt` offers many different options for estimating weights. More info on `WeightIt` here: <https://ngreifer.github.io/WeightIt/>. We will estimate propensity scores using logistic regression and generalized boosted modeling (GBM). For the latter, we also need to install the `gbm` package. If you have not installed these packages, uncomment the following lines to install.
+
+```{r install weightit}
+#install.packages("WeightIt")
+#install.packages("gbm")
+```
+
+```{r }
+library(WeightIt)
+
+ps.form <- exposure1~male+white+age+susp+mathG+readG+parentED+housesmoke
+
+#Estimating weights from logistic regression PS
+logreg.ATT <- weightit(ps.form, data = df, method = "ps", estimand = "ATT")
+
+#Estimating weights using GBM PS
+gbm.ATT <- weightit(ps.form, data = df, method = "gbm", estimand = "ATT",
+                    stop.method = "ks.mean")
+```
+
+Extra code (not in problem set) to illustrate the structure of the weightit object, etc.
+
+```{r }
+logreg.ATT
+names(logreg.ATT)
+summary(logreg.ATT) 
+plot(summary(logreg.ATT))
+
+#Demonstration that ATT weights are correctly computed from PS: weighting by the odds
+logreg.ATT$weights[1:10] 
+logreg.ATT$ps[1:10] 
+logreg.ATT$ps[1:10] / (1-logreg.ATT$ps[1:10])
+logreg.ATT$weights[1:10] 
+
+#One weight and PS per unit
+dim(df)
+length(logreg.ATT$ps)
+length(logreg.ATT$weights)
+```
+
+## Assessing balance with cobalt (Covariate Balance Tables)
+
+To examine the resulting balance from both of these methods, we will use the `cobalt` package. More info on `cobalt` here: <https://ngreifer.github.io/cobalt/>.
+
+```{r install cobalt, eval = FALSE}
+#install.packages('cobalt')
+```
+
+```{r cobalt}
+library(cobalt)
+
+bal.tab(logreg.ATT) # bal.tab = balance table
+love.plot(logreg.ATT, title="Covariate Balance (Logistic Regression PS)", abs = TRUE)
+
+bal.tab(gbm.ATT)
+love.plot(gbm.ATT, title="Covariate Balance (Generalized Boosted Modeling PS)", abs = TRUE)
+```
+
+## Estimate the treatment effect and its standard error using the GBM ATT weights
+
+```{r install sandwich and lmtest}
+#install.packages("sandwich")
+#install.packages("lmtest")
+```
+
+```{r estimate wATT}
+library(sandwich)
+library(lmtest)
+
+glm.gbmweight <- glm(smoke1 ~ exposure1, data = df, family = quasibinomial(),
+                     weights = gbm.ATT$weights)
+gbm.est <- coeftest(glm.gbmweight, vcov. = vcovHC)
+
+gbm.est
+exp(coef(gbm.est)["exposure1"]) #OR of exposure1
+exp(confint(gbm.est)["exposure1",]) #95% CI for OR of exposure1
+```
+
+## Unadjusted effect estimate
+
+Run a logistic regression analysis to assess the unadjusted association between marijuana smoking in adolescence and smoking in adulthood.
+
+```{r unadjusted}
+un.model <- glm(smoke1 ~ exposure1, data = df, family = quasibinomial())
+un.est <- coeftest(un.model)
+
+un.est
+exp(coef(un.est)["exposure1"]) #OR of exposure1
+exp(confint(un.est)["exposure1",]) #95% CI for OR of exposure1
+```
+
+### Note:
+
+Q20 is conceptual and doesn't require code, just interpretation of the plot provided in the quiz.
+
+## Full matching using MatchIt (Q21)
+
+`MatchIt` performs propensity score matching and other matching methods. More info on `MatchIt` here: <https://kosukeimai.github.io/MatchIt>.
+
+```{r install MatchIt, eval = FALSE}
+#install.packages("MatchIt")
+#Note: you need to also install the optmatch package to use full matching
+#install.packages("optmatch")
+```
+
+```{r full matching}
+library(MatchIt)
+
+match1 <- matchit(ps.form, data=df, method="full", estimand="ATT")
+
+bal.tab(match1)
+love.plot(match1, title="Covariate Balance (Full matching)", abs = TRUE)
+
+matched1 <- match.data(match1)
+fullmodel <- glm(smoke1 ~ exposure1, data = matched1, family = quasibinomial(),
+                 weights = weights)
+full.est <- coeftest(fullmodel, vcov. = vcovCL, cluster = ~subclass)
+
+exp(coef(full.est)["exposure1"]) #OR of exposure1
+exp(confint(full.est)["exposure1",]) #95% CI for OR of exposure1
+```
+
+## Comparing balance across methods
+
+```{r}
+bal.tab(ps.form, data = df, un = TRUE,
+        weights = list(logreg = logreg.ATT,
+                       gbm = gbm.ATT,
+                       full = match1))
+
+love.plot(ps.form, data = df, abs = TRUE, 
+          title = "Covariate Balance (All methods)",
+          weights = list(logreg = logreg.ATT,
+                         gbm = gbm.ATT,
+                         full = match1))
+```
+
+## Note about Q28:
+
+*Using one of the three propensity-score approaches you just explored with the AddHealth data, in 1-2 paragraphs write a sample "Methods" section for a research paper where you discuss the use of propensity scores to estimate causal effects. Think through (and include) the aspects of the analysis that you think are important to convey, such as the estimand and the method used, as well as other important pieces of information. Focus on the propensity-score aspects of the methods; you do not need to discuss more general methods-related topics, such as the data and measures used. (Answer in 500 words or less)*
+
+**Points of clarification:**
+
+-   Choose propensity score weighting (with logistic regression weights), propensity score weighting (with GBM weights) or full matching to discuss. It is not required to discuss multiple of these methods. If you really would like to discuss multiple, you can, but be concise.
+
+-   See "Extra slides: Good PS Methods Sections" and "Sample Propensity Score Writeups" *(*in the Online Library \> Tutorial 3) for examples
+
+    -   *Some* important components:
+
+        -   Method used
+
+        -   Estimand of interest
+
+        -   If relevant, were any covariates treated in a special way (i.e. exact matching)
+
+        -   Some diagnostics of how balance is assessed
+
+        -   Describe how the effect is estimated

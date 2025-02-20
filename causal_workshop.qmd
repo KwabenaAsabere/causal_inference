@@ -1,0 +1,398 @@
+---
+title: "CAUSAL WORKSHOP"
+author: "K.Asabere"
+df-print: kable
+execute: 
+  warning: false
+  echo: true
+  message: false
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+##  
+
+```{r}
+library(tidyverse)
+library(finalfit)
+library(broom)
+library(propensity)
+library(causalworkshop)
+library(causaldata)
+library(halfmoon)
+library(rsample)
+theme_set(theme_bw())
+```
+
+```{r}
+nhefs_complete_uc <- nhefs_complete %>% 
+  filter(censored ==0)
+```
+
+```{r}
+#nhefs_complete_uc
+df <- nhefs_complete_uc
+
+```
+
+```{r}
+nhefs_complete_uc %>% 
+  ggplot(aes(x = wt82_71, fill =factor(qsmk)))+
+  geom_density(alpha = 0.5, color = NA)+
+  labs(x = "change in weight (kg)",
+       fill = "quit smoking( 1= yes)")
+```
+
+```{r}
+nhefs_complete_uc %>% 
+  group_by(qsmk) %>% 
+  summarise(
+    mean_weight_change = mean(wt82_71,na.rm = TRUE),
+    sd = sd(wt82_71),
+    .groups ="drop"
+  )
+```
+
+```{r}
+nhefs_complete_uc %>% 
+  lm(wt82_71 ~ qsmk + sex + race + 
+       age + I(age^2) + education + smokeintensity +
+       smokeyrs + I(smokeyrs^2) + exercise + active +
+       wt71 + I(wt71^2), data = .) %>% 
+  tidy(conf.int = TRUE) %>% 
+  filter(term == "qsmk")
+```
+
+### Fit Propensity score model
+
+```{r}
+propensity_model <- nhefs_complete_uc %>% 
+  glm(
+    qsmk ~ sex + race + 
+       age + I(age^2) + education + smokeintensity +
+       smokeyrs + I(smokeyrs^2) + exercise + active +
+       wt71 + I(wt71^2),
+    family = binomial(),
+    data = .
+  )
+```
+
+```{r}
+nhefs_complete_uc <-  propensity_model %>% 
+  # predict whether quit smoking 
+  augment(type.predict = "response", data = nhefs_complete_uc) %>% 
+  # calculate inverse probability
+  mutate(wts = wt_ate(.fitted, qsmk))
+```
+
+### Diagnose model assumptions
+
+What's the distribution of weights?
+
+```{r}
+nhefs_complete_uc %>% 
+  ggplot(aes(x = wts))+
+  geom_histogram(bins = 50, fill = "steelblue",color = "black")+
+  labs(x = "Weights",
+       title = "Distribution of weights")+
+  scale_y_continuous( labels = abs)
+```
+
+```{r}
+nhefs_complete_uc %>% 
+  ggplot(aes(x = .fitted))+
+  geom_mirror_histogram(aes(fill = factor(qsmk)), bins = 50)+
+  labs(x = "propensity score")
+```
+
+```{r}
+
+nhefs_complete_uc %>% 
+  ggplot(aes(x = .fitted))+
+  geom_mirror_histogram(aes(group = qsmk), bins = 50)+
+  geom_mirror_histogram(aes(fill = factor(qsmk),weight = wts), bins = 50,alpha = 0.5)+
+  labs(x = "propensity score",
+       fill = "quit smoking")
+```
+
+### Love Plots
+
+```{r}
+plot_df <- tidy_smd(
+  nhefs_complete_uc,
+  c(wt71,smokeyrs,smokeintensity,sex,race,exercise,education,age,active),
+  .group = qsmk,
+  .wts = wts
+)
+```
+
+```{r}
+plot_df %>% 
+  ggplot(aes(
+    x = abs(smd),
+    y = variable,
+    group = method,
+    color = method
+  ))+
+  geom_love()
+```
+
+### Estimate causal effect with IPW 
+
+```{r}
+ipw_model <- nhefs_complete_uc %>% 
+  lm(wt82_71 ~ qsmk,
+     data = .,
+     weights = wts)
+
+ipw_estimate <- ipw_model %>% 
+  tidy(conf.int = TRUE) %>% 
+  filter(term == "qsmk")
+
+ipw_estimate
+```
+
+#### Fix standard errors with robus SEs
+
+```{r}
+library(estimatr)
+ipw_model_robust <- nhefs_complete_uc %>% 
+  lm_robust(
+  wt82_71 ~ qsmk,
+  data = .,
+  weights = wts
+)
+
+ipw_estimate_robust <- ipw_model_robust %>% 
+  tidy(conf.int = TRUE) %>% 
+  filter(term == "qsmk")
+
+as_tibble(ipw_estimate_robust)
+```
+
+### Fixing confidence intervals with bootstrap
+
+```{r}
+bootstrapped_nhefs_data <- bootstraps(
+  nhefs_complete_uc,
+  times = 1000,
+  # required to calculate CIs later
+  apparent = TRUE
+)
+
+```
+
+```{r}
+fit_ipw <- function(split,...){
+  .df <- analysis(split)
+  # fit propensity score model
+  propensity_model <- 
+  glm(
+    qsmk ~ sex + race + 
+       age + I(age^2) + education + smokeintensity +
+       smokeyrs + I(smokeyrs^2) + exercise + active +
+       wt71 + I(wt71^2),
+    family = binomial(),
+    data = .df
+  )
+  # calculate inverse probability weights
+  .df <- propensity_model %>% 
+    augment(type.predict = "response", data = .df) %>% 
+    mutate(wts = wt_ate(.fitted,qsmk))
+  # fit correctly bootstrapped ipw model
+  lm( wt82_71 ~ qsmk, data = .df, weights = wts) %>% 
+    tidy()
+  
+}
+```
+
+### Using `{rsample}` to estimate our causal effect
+
+```{r}
+# fit ipw model to bootstrapped samples
+ipw_results <-  bootstraps(nhefs_complete_uc, 1000, apparent = TRUE) %>% 
+  mutate(results = map(splits, fit_ipw))
+
+# get T-statistic-based CIs
+boot_estimate <- int_t(ipw_results,results) %>% 
+  filter(term == "qsmk")
+boot_estimate
+```
+
+```{r}
+ipw_estimate <- as_tibble(ipw_estimate)
+ipw_estimate_robust <- as_tibble(ipw_estimate_robust)
+boot_estimate <- as_tibble(boot_estimate)
+
+```
+
+```{r}
+plot_data <- tibble(
+  method = c("ols", "bootstrap", "robust"),
+  estimate = c(ipw_estimate$estimate, boot_estimate$.estimate, ipw_estimate_robust$estimate),
+  conf.low = c(ipw_estimate$conf.low, boot_estimate$.lower, ipw_estimate_robust$conf.low),
+  conf.high = c(ipw_estimate$conf.high, boot_estimate$.upper, ipw_estimate_robust$conf.high)
+)
+
+plot_data
+```
+
+```{r}
+ggplot(plot_data, aes(x = estimate, y = method)) +
+  geom_point(size = 4,color = "steelblue") +  
+  geom_pointrange(aes(xmin = conf.low, xmax = conf.high),color = "steelblue") +  # Confidence intervals
+ # theme_minimal(base_size = 14) + 
+  labs(x = "estimate", y = NULL) +
+  theme(axis.text.y = element_text(size = 14, face = "bold"),
+        axis.title.x = element_text(size = 16, face = "bold"))
+```
+
+### Matching in R (ATT)
+
+```{r}
+library(MatchIt)
+m <- matchit(
+  qsmk ~ sex + race + 
+       age + I(age^2) + education + smokeintensity +
+       smokeyrs + I(smokeyrs^2) + exercise + active +
+       wt71 + I(wt71^2),
+    data = nhefs_complete
+)
+m
+```
+
+```{r}
+matched_data <- get_matches(m, id = "i")
+matched_data <-  as_tibble(matched_data)
+head(matched_data)
+```
+
+```{r}
+m <- matchit(
+  qsmk ~ sex + race + 
+       age + I(age^2) + education + smokeintensity +
+       smokeyrs + I(smokeyrs^2) + exercise + active +
+       wt71 + I(wt71^2),
+    data = nhefs_complete,
+  link = "linear.logit",
+  caliper = 0.1
+)
+m
+```
+
+A **caliper** in propensity score matching refers to the **maximum allowable difference** in propensity scores between matched treated and control units. It ensures that matches are **close in propensity score space**, improving balance between groups and reducing bias. In choosing a caliper size, **a common rule of thumb** is using **0.2 times the standard deviation of the logit of the propensity score** .
+
+```{r}
+# Perform nearest neighbor matching
+match_out <- matchit(qsmk ~ sex + race + age + I(age^2) + education + smokeintensity +
+                        smokeyrs + I(smokeyrs^2) + exercise + active + wt71 + I(wt71^2),
+                      data = nhefs_complete_uc, method = "nearest", ratio = 1)
+
+# Extract matched data
+matched_data_att <- match.data(match_out)
+
+# Estimate ATT
+att_model <- lm(wt82_71 ~ qsmk, data = matched_data_att)
+tidy(att_model)
+```
+
+### ATT Using Inverse Probability Weighting (IPW)
+
+```{r}
+fit_ipw_att <- function(split, ...){
+  .df <- analysis(split)
+  
+  # Fit propensity score model
+  propensity_model <- glm(
+    qsmk ~ sex + race + age + I(age^2) + education + smokeintensity +
+           smokeyrs + I(smokeyrs^2) + exercise + active + wt71 + I(wt71^2),
+    family = binomial(),
+    data = .df
+  )
+
+  # Predict propensity scores
+  .df <- propensity_model %>%
+    augment(type.predict = "response", data = .df) %>%
+    mutate(wts = wt_ate(.fitted,qsmk, exposure_type = "binary"))  # ATT weights
+
+  # Fit weighted regression for ATT
+  lm(wt82_71 ~ qsmk, data = .df, weights = wts) %>%
+    tidy()
+}
+
+# Bootstrap ATT estimates
+ipw_att_results <- bootstraps(nhefs_complete_uc,times =  1000, apparent = TRUE) %>%
+  mutate(results = map(splits, fit_ipw_att))
+
+boot_estimate <- ipw_att_results %>%
+  # calculate T-statistic-based CIs
+ int_t(results) %>% 
+  filter(term == "qsmk")
+
+boot_estimate
+```
+
+```{r}
+ipw_att_results %>% 
+  unnest(cols = results) %>% 
+  ggplot(aes(x = estimate))+
+  geom_histogram(bins = 20, color = "white", fill = "steelblue")
+```
+
+```{r}
+boot_estimate <- ipw_att_results %>%
+  # calculate T-statistic-based CIs
+ int_t(results) %>% 
+  filter(term == "qsmk")
+
+boot_estimate
+```
+
+```{r}
+df <- propensity_model %>% 
+  augment(type.predict = "response", data = nhefs_complete) %>% 
+  mutate(w_ate = wt_ate(.fitted,qsmk))
+```
+
+### ECDF PLOTS
+
+**ECDF plots** are useful for checking **propensity score balance** before and after matching. They show the cumulative distribution of propensity scores for **treated vs. control groups**, helping assess whether the groups are comparable.
+
+```{r}
+df %>% 
+  ggplot(aes(x = wt71, color =factor(qsmk)))+
+  geom_ecdf(linewidth = 1)+
+  scale_color_viridis_d(option = "viridis", labels = c("Yes","No"),"Quit Smoking")+
+  labs(x = "Weight in Kg in 1971",
+       y = "Proportion <= x",
+       title = "Unweighted ECDF"
+       )
+```
+
+#### Weighted ECDF
+
+```{r}
+df %>% 
+  ggplot(aes(x = wt71, color =factor(qsmk)))+
+  geom_ecdf(aes(weights = w_ate), linewidth = 1)+
+  scale_color_viridis_d(option = "viridis", labels = c("Yes","No"),"Quit Smoking")+
+  labs(x = "Weight in Kg in 1971",
+       y = "Proportion <= x",
+       title = "Weighted ECDF"
+       )
+```
+
+#### Weighted tables
+
+Create a design object to incorporate the weights
+
+```{r}
+library(survey)
+svy_des <- svydesign(
+  ids =  ~1,
+  data = df,
+  weights = ~w_ate
+)
+```

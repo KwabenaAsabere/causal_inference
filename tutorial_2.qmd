@@ -1,0 +1,46 @@
+---
+title: "Tutorial_2"
+author: "K.Asabere"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+student_id <- c("A","B","C")
+test1 <- c(90,90,100)
+test2 <- c(80,55,81)
+```
+
+```{r}
+test_scores <- matrix(c(test1,test2),nrow = 2)
+test_scores
+```
+
+```{r}
+
+test_scores_as_df <- data.frame(
+  student_id = c("A","B","C"),
+test1 = c(90,90,100),
+test2 = c(80,55,81)
+)
+
+```
+
+```{r}
+View(test_scores_as_df)
+```
+
+```{r}
+test_scores_as_df$test1
+
+test_scores_as_df[1,]
+test_scores[,1]
+test_scores[[1,1]]
+
+```
